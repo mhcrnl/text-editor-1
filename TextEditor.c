@@ -1,5 +1,6 @@
-/*accepts character on kewstroke
-  detcts arrow keys
+/*
+    implemented backspace for multiple lines
+    
 */
 #include<stdio.h>
 #include<stdlib.h>
@@ -10,7 +11,7 @@
 #include <unistd.h>
 char ch;
 /*
-triple linked list definition
+3ple linked list definition
 ulink and dlink points to upper and lower lines
 rlink points to first word in a line
 last points to last nod first points to first node
@@ -29,6 +30,7 @@ struct word
     struct word *left,*right;
 }*rear=0,*temp2;
 char insert();
+int backspace();
 void traverse(int d);
 char readd(FILE *fp);
 void display();
@@ -75,7 +77,6 @@ char insert()
     */
     int i,flag=0;
     int row=0,col=0;
-    char l;
     temp3=(struct line*)malloc(sizeof(struct line));  
     temp2=(struct word*)malloc(sizeof(struct word));
     temp3->ulink=temp3->dlink=0;//initializing pointers to 0
@@ -103,7 +104,7 @@ char insert()
     {
         ch=getch();//to accept a chracter
 
-        if(ch=='\n'||ch==2||ch==7)//2 is ctrl b 7 is ctrl+g
+        if(ch=='\n'||ch==7)//7 is ctrl+g
         {   if(ch=='\n')
             {
                 putchar(ch);
@@ -112,13 +113,28 @@ char insert()
         }
         if(ch==6)//ctrl+f
             search();
-         if(ch==127||ch==07)//backspace
-        {
-            l=strlen(rear->info2);
-                printf("%c",rear->info2[l-1]);
-                rear->info2[l-1]='\0';
-        }             
-
+        if(ch==127||ch==07)//backspace
+        {   
+            col--;
+            if(col<0)
+            {   col=0;
+                temp3=temp3->ulink;
+                if(temp3->rlink!=0)
+                {
+                    temp2=(struct word *)temp3->rlink;
+                    col+=strlen(temp2->info2);
+                    while(temp2->right!=0)
+                    {  
+                        temp2=temp2->right;
+                        col+=strlen(temp2->info2);                        
+                    }
+                }
+            
+            }
+            backspace();
+            i=strlen(temp2->info2)-1;
+            continue;
+        }
         if(ch!=' '&&flag==1)//1st character after space
         {
             temp2=(struct word*)malloc(sizeof(struct word));
@@ -146,7 +162,7 @@ char insert()
                 i=0;
             }
             col++;
-            rear->info2[i]=ch;
+            temp2->info2[i]=ch;
         }
        
         else if(ch=='\033')//escape
@@ -181,9 +197,26 @@ char insert()
              }
             col++;
             putchar(ch);
-            rear->info2[i]=ch;
+            temp2->info2[i]=ch;
         }
     }      
+}
+int backspace()
+{
+    int l;
+    l=strlen(temp2->info2);
+    if(l>0)     
+        temp2->info2[l-1]='\0';
+    else if(strlen(temp2->info2)==0)
+    {   
+        temp2=temp2->left;
+        l=strlen(temp2->info2);
+        temp2->info2[l-1]='\0';
+        if(strlen(temp2->info2)==0)
+            temp2=temp2->left;  
+    }
+    return l-1;
+  
 }
 void traverse(int d)
 {
@@ -284,6 +317,30 @@ char readd(FILE *fp)
 */
 void display()
 {
+
+    temp3=first;
+    while(temp3!=last->dlink)
+    {   
+        if(temp3->rlink!=0)
+        {
+            temp2=(struct word *)temp3->rlink;
+            while(temp2!=0)
+            {  
+                printf("%s",temp2->info2);
+                temp2=temp2->right;
+            }
+            if(temp3!=last)
+                printf("\n");
+        }
+        temp3=temp3->dlink;   
+    }
+}
+/*
+used to save the file ctrl-g
+*/
+void save(FILE *fp,char filename[15])
+{
+    fp=fopen(filename,"w");
     temp3=first;
     while(temp3!=0)
     {   
@@ -291,14 +348,17 @@ void display()
         {
             temp2=(struct word *)temp3->rlink;
             while(temp2!=0)
-            {   
-                printf("%s",temp2->info2);
+            {  
+                fputs(temp2->info2,fp);
                 temp2=temp2->right;
             }
-                printf("\n");
+            if(temp3!=last)
+                fputc('\n',fp);
         }
         temp3=temp3->dlink;   
     }
+    printf("\n\tsaved\n");
+    fclose(fp);
 }
 void search()
 {
@@ -338,30 +398,7 @@ void search()
     if(flag==0)
         printf("not found");
 }
-/*
-used to save the file ctrl-g
-*/
-void save(FILE *fp,char filename[15])
-{
-    fp=fopen(filename,"w");
-    temp3=first;
-    while(temp3!=0)
-    {   
-        if(temp3->rlink!=0)
-        {
-            temp2=(struct word *)temp3->rlink;
-            while(temp2!=0)
-            {   
-                fputs(temp2->info2,fp);
-                temp2=temp2->right;
-            }
-            fputc('\n',fp);
-        }
-        temp3=temp3->dlink;   
-    }
-    printf("\n\tsaved\n");
-    fclose(fp);
-}
+
 /*
 main with arguments
 argc=number of arguments
@@ -378,8 +415,8 @@ int main(int argc,char *argv[])
         exit(0);
     }
     strcpy(filename,argv[1]);        
-    printf("\t\t\tpress ctrl+b to quit edit, ctrl+g to save\n");
-    fp=fopen(argv[1],"r+");//open existing file to read and write
+    printf("\t\t\tpress ctrl+b to quit edit, ctrl+g to save and exit\n");
+    fp=fopen(argv[1],"r+");
     if(fp==NULL)
     {
         printf("no file");
@@ -387,17 +424,34 @@ int main(int argc,char *argv[])
     }
     while(1)
     {   
-        ch=readd(fp);//read into the linked list data structure
-        if(ch==EOF)//read until end of file is reached then display
-        {
-            display();      //displays the read file
+        ch=readd(fp);
+        if(ch==EOF)
+        {   
+            if(last->rlink==0)
+            {
+               last=last->ulink;
+            }
+            else if(last->rlink!=0)
+            {   
+                temp2=(struct word *)last->rlink;
+                if(!strlen(temp2->info2))
+                {
+                    last=last->ulink;
+                }
+            }
+            
+            display(); 
+            printf("\n");             
             while(1)
             {
-                ch=insert();  //editing is done in insert()
-                if(ch==2)//2 is ctrl+b,used to exit
-                    break;
-                if(ch==7)//7 is ctrl+g,used to save
+                ch=insert();        //fc
+                if(ch==7)
+                {   
+                    if(last->rlink==0)
+                        last=last->ulink;
                     save(fp,filename);
+                    exit(0);
+                }
             }
             break;
          }
