@@ -10,7 +10,7 @@
 #include <unistd.h>
 char ch;
 /*
-3ple linked list definition
+triple linked list definition
 ulink and dlink points to upper and lower lines
 rlink points to first word in a line
 last points to last nod first points to first node
