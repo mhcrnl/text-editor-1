@@ -1,14 +1,14 @@
 /*
-    implemented backspace for multiple lines
+    implemented ncurses
     
 */
 #include<stdio.h>
 #include<stdlib.h>
 #include<malloc.h>
 #include<string.h>
-
+#include<ncurses.h>
 #include <termios.h>
-#include <unistd.h>
+#include <unistd.h> 
 char ch;
 /*
 3ple linked list definition
@@ -38,7 +38,7 @@ void search();
 void save(FILE *fp,char filename[15]);
 
 /* reads from keypress, doesn't echo */
-int getch(void)
+/*int getch(void)
 {
     struct termios oldattr, newattr;
     int ch;
@@ -50,9 +50,9 @@ int getch(void)
     tcsetattr( STDIN_FILENO, TCSANOW, &oldattr );
     return ch;
 }
-
+*/
 /* reads from keypress, echoes */
-int getche(void)
+/*int getche(void)
 {
     struct termios oldattr, newattr;
     int ch;
@@ -63,7 +63,7 @@ int getche(void)
     ch = getchar();
     tcsetattr( STDIN_FILENO, TCSANOW, &oldattr );
     return ch;
-}
+}*/
 /*
 inserts words,lines etc to the data stucture
 most important funtion after main
@@ -107,7 +107,7 @@ char insert()
         if(ch=='\n'||ch==7)//7 is ctrl+g
         {   if(ch=='\n')
             {
-                putchar(ch);
+                addch(ch);
             }
             return ch;
         }
@@ -146,7 +146,7 @@ char insert()
         }
         if(ch==' ')
         {
-            putchar(ch);
+            addch(ch);
             if(i==19)//end of array size
             {
                 flag=0;//to start new array
@@ -196,16 +196,17 @@ char insert()
                 i=0;
              }
             col++;
-            putchar(ch);
+            addch(ch);
             temp2->info2[i]=ch;
         }
     }      
 }
 int backspace()
 {
-    int l;
+    int l,x,y;
+    getyx(stdscr,y,x);
     l=strlen(temp2->info2);
-    if(l>0)     
+    if(l>0)     //if length of a word >0
         temp2->info2[l-1]='\0';
     else if(strlen(temp2->info2)==0)
     {   
@@ -215,6 +216,14 @@ int backspace()
         if(strlen(temp2->info2)==0)
             temp2=temp2->left;  
     }
+    if(x!=0)
+    {
+    	printw("\b ");
+    	move(y,x-1);
+    }
+    else
+    	move(y-1,20);
+    refresh();
     return l-1;
   
 }
@@ -326,11 +335,11 @@ void display()
             temp2=(struct word *)temp3->rlink;
             while(temp2!=0)
             {  
-                printf("%s",temp2->info2);
+                printw("%s",temp2->info2);
                 temp2=temp2->right;
             }
             if(temp3!=last)
-                printf("\n");
+                printw("\n");
         }
         temp3=temp3->dlink;   
     }
@@ -357,7 +366,7 @@ void save(FILE *fp,char filename[15])
         }
         temp3=temp3->dlink;   
     }
-    printf("\n\tsaved\n");
+  //  printf("\n\tsaved\n");
     fclose(fp);
 }
 void search()
@@ -414,6 +423,8 @@ int main(int argc,char *argv[])
         printf("no filename\n");
         exit(0);
     }
+    initscr();
+    noecho();
     strcpy(filename,argv[1]);        
     printf("\t\t\tpress ctrl+b to quit edit, ctrl+g to save and exit\n");
     fp=fopen(argv[1],"r+");
@@ -441,7 +452,7 @@ int main(int argc,char *argv[])
             }
             
             display(); 
-            printf("\n");             
+            printw("\n");             
             while(1)
             {
                 ch=insert();        //fc
@@ -450,10 +461,13 @@ int main(int argc,char *argv[])
                     if(last->rlink==0)
                         last=last->ulink;
                     save(fp,filename);
+                    endwin();
                     exit(0);
                 }
             }
             break;
          }
-     }        
+     }
+     
+     endwin();        
 }
